@@ -16,7 +16,7 @@ type KVStore struct {
 }
 
 func (k *KVStore) save() error {
-	f, err := os.OpenFile(k.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o755)
+	f, err := os.OpenFile(k.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
@@ -29,11 +29,36 @@ func (k *KVStore) save() error {
 	return nil
 }
 
+var errNotFound = errors.New("key not found")
+
 func (k *KVStore) Set(key, value string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
-	defer k.save()
+
+	// Trying to make keyset atomically
+	oldValue, found := k.data[key]
+
+	var err error
+	defer func() {
+		if err == nil {
+			return
+		}
+
+		if !found {
+			delete(k.data, key)
+			return
+		}
+
+		k.data[key] = oldValue
+	}()
+
 	k.data[key] = value
+
+	err = k.save()
+	if err != nil {
+		return errors.New("unable to save key")
+	}
+
 	return nil
 }
 
