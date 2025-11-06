@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
 	"sync"
 )
 
@@ -12,6 +14,16 @@ type KVStore struct {
 }
 
 func (k *KVStore) save() error {
+	f, err := os.OpenFile(k.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o755)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if err := json.NewEncoder(f).Encode(k.data); err != nil {
+		return err
+	}
+
 	return nil
 }
 
