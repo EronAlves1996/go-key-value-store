@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"log"
 	"os"
 	"sync"
 )
@@ -45,4 +47,27 @@ func (k *KVStore) Get(key string) (string, error) {
 	}
 
 	return v, nil
+}
+
+func main() {
+	kv := KVStore{
+		mu:   sync.RWMutex{},
+		data: make(map[string]string),
+		file: "store.json",
+	}
+
+	if err := kv.Set("test", "teakslfjaskfas"); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := kv.Set("aklsflafas", "fkasfhaklfkjashfslf"); err != nil {
+		log.Fatal(err)
+	}
+
+	value, err := kv.Get("test")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(value)
 }
