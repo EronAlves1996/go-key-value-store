@@ -17,7 +17,7 @@ func (l LoggingInterceptor) Intercept(method string, i *storage.InterceptorConte
 var _ storage.Interceptor = LoggingInterceptor{}
 
 func main() {
-	kv := *storage.New(storage.XmlStorage, []storage.Interceptor{
+	kv := storage.New(storage.XmlStorage, []storage.Interceptor{
 		LoggingInterceptor{},
 	}, "store.xml")
 
