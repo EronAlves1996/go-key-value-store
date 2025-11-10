@@ -2,7 +2,7 @@ package storage
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"os"
 )
 
@@ -28,7 +28,7 @@ func (k *jsonStore) Delete(key string) (string, error) {
 	k.inMemoryStorage.Delete(key)
 	if err := k.save(); err != nil {
 		k.data[key] = value
-		return "", errors.New("unable to delete key")
+		return "", fmt.Errorf("unable to delete key %q: %w", key, err)
 	}
 
 	return value, nil
@@ -68,12 +68,12 @@ func (k *jsonStore) Set(key, value string) error {
 
 	err = k.inMemoryStorage.Set(key, value)
 	if err != nil {
-		return errors.New("unable to save key")
+		return fmt.Errorf("unable to save key %q: %w", key, err)
 	}
 
 	err = k.save()
 	if err != nil {
-		return errors.New("unable to save key")
+		return fmt.Errorf("unable to save key %q: %w", key, err)
 	}
 
 	return nil

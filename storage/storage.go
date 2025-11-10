@@ -21,7 +21,7 @@ const (
 	InMemoryStorage
 )
 
-func New(t StorageType, ins []Interceptor, f string) *Storage {
+func New(t StorageType, ins []Interceptor, f string) Storage {
 	data := make(map[string]string)
 	var s Storage
 	inMemory := &inMemoryStorage{
@@ -45,5 +45,5 @@ func New(t StorageType, ins []Interceptor, f string) *Storage {
 		s = inMemory
 	}
 
-	return &s
+	return s
 }

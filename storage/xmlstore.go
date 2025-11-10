@@ -2,7 +2,7 @@ package storage
 
 import (
 	"encoding/xml"
-	"errors"
+	"fmt"
 	"os"
 )
 
@@ -100,12 +100,12 @@ func (x *xmlStore) Set(key string, value string) error {
 
 	err = x.inMemoryStorage.Set(key, value)
 	if err != nil {
-		return errors.New("unable to save key")
+		return fmt.Errorf("unable to save key %q: %w", key, err)
 	}
 
 	err = x.save()
 	if err != nil {
-		return errors.New("unable to save key")
+		return fmt.Errorf("unable to save key %q: %w", key, err)
 	}
 
 	return nil
