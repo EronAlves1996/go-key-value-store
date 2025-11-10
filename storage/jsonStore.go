@@ -4,44 +4,28 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"sync"
 )
 
 type jsonStore struct {
-	mu   *sync.RWMutex
-	data map[string]string
+	inMemoryStorage
 	file string
 }
 
 var _ Storage = &jsonStore{}
 
-func (k *jsonStore) internalGet(key string) (string, error) {
-	v, ok := k.data[key]
-
-	if !ok {
-		return "", ErrNotFound
-	}
-
-	return v, nil
-}
-
 func (k *jsonStore) Get(key string) (string, error) {
-	k.mu.RLock()
-	defer k.mu.RUnlock()
-	return k.internalGet(key)
+	return k.inMemoryStorage.Get(key)
 }
 
 // Delete implements Storage.
 func (k *jsonStore) Delete(key string) (string, error) {
-	k.mu.Lock()
-	defer k.mu.Unlock()
-	value, err := k.internalGet(key)
+	value, err := k.inMemoryStorage.Get(key)
 
 	if err != nil {
 		return "", err
 	}
 
-	delete(k.data, key)
+	k.inMemoryStorage.Delete(key)
 	if err := k.save(); err != nil {
 		k.data[key] = value
 		return "", errors.New("unable to delete key")
@@ -65,11 +49,8 @@ func (k *jsonStore) save() error {
 }
 
 func (k *jsonStore) Set(key, value string) error {
-	k.mu.Lock()
-	defer k.mu.Unlock()
-
 	// Trying to make keyset atomically
-	oldValue, found := k.data[key]
+	oldValue, found := k.inMemoryStorage.Get(key)
 
 	var err error
 	defer func() {
@@ -77,15 +58,18 @@ func (k *jsonStore) Set(key, value string) error {
 			return
 		}
 
-		if !found {
-			delete(k.data, key)
+		if found == nil {
+			k.inMemoryStorage.Delete(key)
 			return
 		}
 
-		k.data[key] = oldValue
+		k.inMemoryStorage.Set(key, oldValue)
 	}()
 
-	k.data[key] = value
+	err = k.inMemoryStorage.Set(key, value)
+	if err != nil {
+		return errors.New("unable to save key")
+	}
 
 	err = k.save()
 	if err != nil {

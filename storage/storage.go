@@ -21,29 +21,28 @@ const (
 	InMemoryStorage
 )
 
-func New(t StorageType, f string) *Storage {
-	mu := sync.RWMutex{}
+func New(t StorageType, ins []Interceptor, f string) *Storage {
 	data := make(map[string]string)
 	var s Storage
+	inMemory := &inMemoryStorage{
+		mu:           &sync.RWMutex{},
+		data:         data,
+		interceptors: ins,
+	}
 
 	switch t {
 	case XmlStorage:
 		s = &xmlStore{
-			mu:   &mu,
-			data: data,
-			file: f,
+			inMemoryStorage: *inMemory,
+			file:            f,
 		}
 	case JsonStorage:
 		s = &jsonStore{
-			mu:   &mu,
-			data: data,
-			file: f,
+			inMemoryStorage: *inMemory,
+			file:            f,
 		}
 	case InMemoryStorage:
-		s = &inMemoryStorage{
-			data: data,
-			mu:   &mu,
-		}
+		s = inMemory
 	}
 
 	return &s

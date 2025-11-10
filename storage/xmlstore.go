@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"errors"
 	"os"
-	"sync"
 )
 
 type xmlMap map[string]string
@@ -35,26 +34,11 @@ func (m xmlMap) MarshalXML(e *xml.Encoder) error {
 }
 
 type xmlStore struct {
-	mu   *sync.RWMutex
-	data xmlMap
+	inMemoryStorage
 	file string
 }
 
 var _ Storage = &xmlStore{}
-
-func (x *xmlStore) lock() func() {
-	x.mu.Lock()
-	return func() {
-		x.mu.Unlock()
-	}
-}
-
-func (x *xmlStore) rlock() func() {
-	x.mu.RLock()
-	return func() {
-		x.mu.RUnlock()
-	}
-}
 
 func (x *xmlStore) save() error {
 	f, err := os.OpenFile(x.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
@@ -66,7 +50,7 @@ func (x *xmlStore) save() error {
 
 	encoder := xml.NewEncoder(f)
 
-	if err := x.data.MarshalXML(encoder); err != nil {
+	if err := xmlMap(x.data).MarshalXML(encoder); err != nil {
 		return err
 	}
 
@@ -75,8 +59,7 @@ func (x *xmlStore) save() error {
 
 // Delete implements Storage.
 func (x *xmlStore) Delete(key string) (string, error) {
-	defer x.lock()()
-	value, err := x.internalGet(key)
+	value, err := x.inMemoryStorage.Get(key)
 
 	if err != nil {
 		return "", err
@@ -90,26 +73,16 @@ func (x *xmlStore) Delete(key string) (string, error) {
 	return value, nil
 }
 
-func (x *xmlStore) internalGet(key string) (string, error) {
-	value, ok := x.data[key]
-	if !ok {
-		return "", ErrNotFound
-	}
-	return value, nil
-}
-
 // Get implements Storage.
 func (x *xmlStore) Get(key string) (string, error) {
-	defer x.rlock()()
-	return x.internalGet(key)
+	return x.inMemoryStorage.Get(key)
 }
 
 // Set implements Storage.
 func (x *xmlStore) Set(key string, value string) error {
-	defer x.lock()()
 
 	// Trying to make keyset atomically
-	oldValue, found := x.data[key]
+	oldValue, found := x.inMemoryStorage.Get(key)
 
 	var err error
 	defer func() {
@@ -117,15 +90,18 @@ func (x *xmlStore) Set(key string, value string) error {
 			return
 		}
 
-		if !found {
-			delete(x.data, key)
+		if found == nil {
+			x.inMemoryStorage.Delete(key)
 			return
 		}
 
-		x.data[key] = oldValue
+		x.inMemoryStorage.Set(key, oldValue)
 	}()
 
-	x.data[key] = value
+	err = x.inMemoryStorage.Set(key, value)
+	if err != nil {
+		return errors.New("unable to save key")
+	}
 
 	err = x.save()
 	if err != nil {
