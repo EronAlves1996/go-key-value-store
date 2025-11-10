@@ -7,9 +7,36 @@ import (
 	"sync"
 )
 
+type xmlMap map[string]string
+
+func (m xmlMap) MarshalXML(e *xml.Encoder) error {
+	start := xml.StartElement{
+		Name: xml.Name{
+			Local: "map",
+		},
+	}
+	err := e.EncodeToken(start)
+	if err != nil {
+		return err
+	}
+
+	for k, v := range m {
+		name := xml.StartElement{
+			Name: xml.Name{Local: k},
+		}
+
+		err := e.EncodeElement(v, name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return e.EncodeToken(start.End())
+}
+
 type xmlStore struct {
 	mu   *sync.RWMutex
-	data map[string]string
+	data xmlMap
 	file string
 }
 
@@ -37,7 +64,9 @@ func (x *xmlStore) save() error {
 
 	defer f.Close()
 
-	if err := xml.NewEncoder(f).Encode(x.data); err != nil {
+	encoder := xml.NewEncoder(f)
+
+	if err := x.data.MarshalXML(encoder); err != nil {
 		return err
 	}
 
