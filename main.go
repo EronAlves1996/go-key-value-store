@@ -1,26 +1,14 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
-	"sync"
+
+	"github.com/EronAlves1996/go-key-value-store/storage"
 )
 
-type Storage interface {
-	Get(key string) (string, error)
-	Set(key, value string) error
-	Delete(key string) (string, error)
-}
-
-var errNotFound = errors.New("key not found")
-
 func main() {
-	kv := JsonStore{
-		mu:   sync.RWMutex{},
-		data: make(map[string]string),
-		file: "store.json",
-	}
+	kv := *storage.New(storage.JsonStorage, "store.json")
 
 	if err := kv.Set("test", "teakslfjaskfas"); err != nil {
 		log.Fatal(err)

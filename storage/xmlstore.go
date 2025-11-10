@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"encoding/xml"
@@ -7,29 +7,29 @@ import (
 	"sync"
 )
 
-type XmlStore struct {
-	mu   sync.RWMutex
+type xmlStore struct {
+	mu   *sync.RWMutex
 	data map[string]string
 	file string
 }
 
-var _ Storage = &XmlStore{}
+var _ Storage = &xmlStore{}
 
-func (x *XmlStore) lock() func() {
+func (x *xmlStore) lock() func() {
 	x.mu.Lock()
 	return func() {
 		x.mu.Unlock()
 	}
 }
 
-func (x *XmlStore) rlock() func() {
+func (x *xmlStore) rlock() func() {
 	x.mu.RLock()
 	return func() {
 		x.mu.RUnlock()
 	}
 }
 
-func (x *XmlStore) save() error {
+func (x *xmlStore) save() error {
 	f, err := os.OpenFile(x.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
@@ -45,7 +45,7 @@ func (x *XmlStore) save() error {
 }
 
 // Delete implements Storage.
-func (x *XmlStore) Delete(key string) (string, error) {
+func (x *xmlStore) Delete(key string) (string, error) {
 	defer x.lock()()
 	value, err := x.internalGet(key)
 
@@ -61,22 +61,22 @@ func (x *XmlStore) Delete(key string) (string, error) {
 	return value, nil
 }
 
-func (x *XmlStore) internalGet(key string) (string, error) {
+func (x *xmlStore) internalGet(key string) (string, error) {
 	value, ok := x.data[key]
 	if !ok {
-		return "", errNotFound
+		return "", ErrNotFound
 	}
 	return value, nil
 }
 
 // Get implements Storage.
-func (x *XmlStore) Get(key string) (string, error) {
+func (x *xmlStore) Get(key string) (string, error) {
 	defer x.rlock()()
 	return x.internalGet(key)
 }
 
 // Set implements Storage.
-func (x *XmlStore) Set(key string, value string) error {
+func (x *xmlStore) Set(key string, value string) error {
 	defer x.lock()()
 
 	// Trying to make keyset atomically

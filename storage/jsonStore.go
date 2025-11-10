@@ -1,4 +1,4 @@
-package main
+package storage
 
 import (
 	"encoding/json"
@@ -7,32 +7,32 @@ import (
 	"sync"
 )
 
-type JsonStore struct {
-	mu   sync.RWMutex
+type jsonStore struct {
+	mu   *sync.RWMutex
 	data map[string]string
 	file string
 }
 
-var _ Storage = &JsonStore{}
+var _ Storage = &jsonStore{}
 
-func (k *JsonStore) internalGet(key string) (string, error) {
+func (k *jsonStore) internalGet(key string) (string, error) {
 	v, ok := k.data[key]
 
 	if !ok {
-		return "", errNotFound
+		return "", ErrNotFound
 	}
 
 	return v, nil
 }
 
-func (k *JsonStore) Get(key string) (string, error) {
+func (k *jsonStore) Get(key string) (string, error) {
 	k.mu.RLock()
 	defer k.mu.RUnlock()
 	return k.internalGet(key)
 }
 
 // Delete implements Storage.
-func (k *JsonStore) Delete(key string) (string, error) {
+func (k *jsonStore) Delete(key string) (string, error) {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 	value, err := k.internalGet(key)
@@ -50,7 +50,7 @@ func (k *JsonStore) Delete(key string) (string, error) {
 	return value, nil
 }
 
-func (k *JsonStore) save() error {
+func (k *jsonStore) save() error {
 	f, err := os.OpenFile(k.file, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
@@ -64,7 +64,7 @@ func (k *JsonStore) save() error {
 	return nil
 }
 
-func (k *JsonStore) Set(key, value string) error {
+func (k *jsonStore) Set(key, value string) error {
 	k.mu.Lock()
 	defer k.mu.Unlock()
 
