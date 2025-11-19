@@ -1,6 +1,10 @@
 package storage
 
-import "sync"
+import (
+	"sync"
+
+	"github.com/EronAlves1996/go-key-value-store/errors"
+)
 
 type inMemoryStorage struct {
 	data         map[string]string
@@ -48,6 +52,12 @@ func (i *inMemoryStorage) internalGet(inc *InterceptorContext) {
 
 func (i *inMemoryStorage) internalSet(inc *InterceptorContext) {
 	defer i.runInterceptors("SET", inc)
+	if inc.Key == "" {
+		inc.Err = &errors.InvalidKeyError{
+			Key: inc.Key,
+		}
+		return
+	}
 	i.data[inc.Key] = inc.Value
 }
 
