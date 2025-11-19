@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
+	internal_errors "github.com/EronAlves1996/go-key-value-store/errors"
 	"github.com/EronAlves1996/go-key-value-store/storage"
 )
 
@@ -32,6 +34,17 @@ func main() {
 	value, err := kv.Get("test")
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if err := kv.Set("", "teste"); err != nil {
+		if errors.Is(err, &internal_errors.InvalidKeyError{}) {
+			fmt.Println("error is invalid key error")
+		}
+
+		if errors.As(err, &internal_errors.InvalidKeyError{}) {
+			cast, _ := err.(internal_errors.InvalidKeyError)
+			fmt.Printf("invalid key error: %v\n", cast.Key)
+		}
 	}
 
 	fmt.Println(value)
